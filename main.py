@@ -45,21 +45,12 @@ def add_client(conn, first_name, last_name, email):
         ''')
     conn.commit()
 
-# Не могу найти исправление ошибки.
-# Выдает ошибку:
-# Traceback (most recent call last):
-#   File "G:\netology\SQL_HomeWork_4.1\main.py", line 72, in <module>
-#     change_client(conn, 1, first_name='Maksim', last_name='Petrov', email='Petrov@petrov.com')
-#   File "G:\netology\SQL_HomeWork_4.1\main.py", line 52, in change_client
-#     cur.execute('''
-# ValueError: unsupported format character '
-# ' (0xa) at index 75
 def change_client(conn, client_id, first_name=None, last_name=None, email=None):
     with conn.cursor() as cur:
         if first_name != None:
             cur.execute('''
                 UPDATE client SET first_name=%s
-                WHERE id=%
+                WHERE id=%s;
             ''', (first_name, client_id))
         if last_name != None:
             cur.execute('''
@@ -73,20 +64,29 @@ def change_client(conn, client_id, first_name=None, last_name=None, email=None):
             ''', (email, client_id))
     conn.commit()
 
-
-#Данная проблема везде *_*
 def delete_client(conn, client_id):
     with conn.cursor() as cur:
         cur.execute('''
             DELETE FROM client
-            WHERE client_id=%;
+            WHERE client.id=%s;
         ''', (client_id))
         conn.commit()
+
+def find_client(conn, first_name=None, last_name=None, email=None):
+    with conn.cursor() as cur:
+        if first_name != None:
+            cur.execute('''
+                SELECT * FROM client
+                WHERE first_name=%s;
+            ''', (first_name))
+            print(cur.fetchall())
+
 
 if __name__ == '__main__':
     conn = psycopg2.connect(database="netology_db", user="postgres", password="345154m9m9M")
     create_db(conn)
-    add_client(conn, 'Ivan', "Ivanov", 'Test@test.ru')
+    add_client(conn, "Ivan", "Ivanov", "Test@test.ru")
     #change_client(conn, 1, first_name='Maksim', last_name='Petrov', email='Petrov@petrov.com')
-    delete_client(conn, '1')
+    #delete_client(conn, '1')
+    find_client(conn, first_name="Ivan")
     conn.close()
