@@ -37,11 +37,34 @@ def create_db(conn):
         print(error)
 
 
-def add_client(conn, first_name, last_name, email):
+def add_client(conn, first_name, last_name, email, phone=None):
     with conn.cursor() as cur:
         cur.execute(f'''
             INSERT INTO client(first_name, last_name, email) VALUES
-            ('{first_name}', '{last_name}', '{email}');
+            ('{first_name}', '{last_name}', '{email}') RETURNING id;
+        ''')
+        client_id = cur.fetchone()[0]
+        if phone != None:
+            cur.execute(f'''
+                INSERT INTO phone(phone) VALUES
+                ('{phone}') RETURNING id;
+            ''')
+            phone_id = cur.fetchone()[0]
+            cur.execute(f'''
+                INSERT INTO client_phone(client_id, phone_id) VALUES
+                ('{client_id}', '{phone_id}');
+            ''')
+    conn.commit()
+
+def add_phone(conn, client_id, phone):
+    with conn.cursor() as cur:
+        cur.execute(f'''
+            INSERT INTO phone(phone) VALUES
+            ('{phone}') RETURNING id;
+        ''')
+        cur.execute(f'''
+            INSERT INTO client_phone(client_id, phone_id) VALUES
+            ('{client_id}', '{cur.fetchone()[0]}');
         ''')
     conn.commit()
 
@@ -66,11 +89,27 @@ def change_client(conn, client_id, first_name=None, last_name=None, email=None):
 
 def delete_client(conn, client_id):
     with conn.cursor() as cur:
-        cur.execute('''
-            DELETE FROM client
-            WHERE client.id=%s;
-        ''', (client_id))
-        conn.commit()
+        try:
+            cur.execute('''
+                DELETE FROM client_phone
+                WHERE id=%s;
+            ''', (client_id))
+        finally:
+            try:
+                cur.execute('''
+                    DELETE FROM phone
+                    WHERE id=%s;
+                ''', (client_id))
+            finally:
+                try:
+                    cur.execute('''
+                        DELETE FROM client
+                        WHERE id=%s;
+                    ''', (client_id))
+                except Exception as error:
+                    print(f'Не удалось удалить клиента:\n{error}')
+
+    conn.commit()
 
 def find_client(conn, first_name=None, last_name=None, email=None):
     with conn.cursor() as cur:
@@ -85,8 +124,9 @@ def find_client(conn, first_name=None, last_name=None, email=None):
 if __name__ == '__main__':
     conn = psycopg2.connect(database="netology_db", user="postgres", password="345154m9m9M")
     create_db(conn)
-    add_client(conn, "Ivan", "Ivanov", "Test@test.ru")
-    #change_client(conn, 1, first_name='Maksim', last_name='Petrov', email='Petrov@petrov.com')
-    #delete_client(conn, '1')
-    find_client(conn, first_name="Ivan")
+    add_client(conn, "Ivan", "Ivanov", "Test@test.ru", "323232")
+    add_phone(conn, '1', '121212')
+    change_client(conn, 1, first_name='Maksim', last_name='Petrov', email='Petrov@petrov.com')
+    delete_client(conn, '1')
+    #find_client(conn, first_name="Maksim")
     conn.close()
